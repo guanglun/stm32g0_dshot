@@ -60,6 +60,7 @@ extern DMA_HandleTypeDef hdma_tim2_ch1;
 extern DMA_HandleTypeDef hdma_tim2_ch2;
 extern DMA_HandleTypeDef hdma_tim2_ch3;
 extern DMA_HandleTypeDef hdma_tim2_ch4;
+extern DMA_HandleTypeDef hdma_usart1_rx;
 /* USER CODE BEGIN EV */
 
 /* USER CODE END EV */
@@ -180,6 +181,7 @@ void DMA1_Ch4_5_DMAMUX1_OVR_IRQHandler(void)
 
   /* USER CODE END DMA1_Ch4_5_DMAMUX1_OVR_IRQn 0 */
   HAL_DMA_IRQHandler(&hdma_tim2_ch4);
+  HAL_DMA_IRQHandler(&hdma_usart1_rx);
   /* USER CODE BEGIN DMA1_Ch4_5_DMAMUX1_OVR_IRQn 1 */
 
   /* USER CODE END DMA1_Ch4_5_DMAMUX1_OVR_IRQn 1 */
