@@ -39,7 +39,7 @@
 #define DSHOT300_HZ     		MHZ_TO_HZ(6)
 #define DSHOT150_HZ     		MHZ_TO_HZ(3)
 
-#define MOTOR_BIT_0            	27
+#define MOTOR_BIT_0            	26
 #define MOTOR_BIT_1            	53
 #define MOTOR_BITLENGTH        	71
 
