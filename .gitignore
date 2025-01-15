@@ -1,3 +1,5 @@
 MDK-ARM/stm32g0_dshot
 .vscode
 Drivers/CMSIS/DSP/Examples/ARM/arm_matrix_example/Abstract.txt
+MDK-ARM/RTE/_stm32g0_dshot/RTE_Components.h
+MDK-ARM/stm32g0_dshot.uvguix.*
