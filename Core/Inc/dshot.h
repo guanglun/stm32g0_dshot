@@ -19,16 +19,16 @@
 // Timer Clock
 #define TIMER_CLOCK				64000000	// 64MHz
 
-#define MOTOR_1_TIM             (&htim2)
+#define MOTOR_1_TIM             (&htim3)
 #define MOTOR_1_TIM_CHANNEL     TIM_CHANNEL_1
 
-#define MOTOR_2_TIM             (&htim2)
+#define MOTOR_2_TIM             (&htim3)
 #define MOTOR_2_TIM_CHANNEL     TIM_CHANNEL_2
 
-#define MOTOR_3_TIM             (&htim2)
+#define MOTOR_3_TIM             (&htim3)
 #define MOTOR_3_TIM_CHANNEL     TIM_CHANNEL_3
 
-#define MOTOR_4_TIM             (&htim2)
+#define MOTOR_4_TIM             (&htim3)
 #define MOTOR_4_TIM_CHANNEL     TIM_CHANNEL_4
 
 

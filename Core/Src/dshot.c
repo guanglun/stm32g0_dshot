@@ -10,7 +10,7 @@
 
 #include "dshot.h"
 
-extern TIM_HandleTypeDef htim2;
+extern TIM_HandleTypeDef htim3;
 
 /* Variables */
 static uint32_t motor1_dmabuffer[DSHOT_DMA_BUFFER_SIZE];
@@ -25,14 +25,14 @@ static uint32_t dshot_choose_type(dshot_type_e dshot_type);
 static void dshot_set_timer(dshot_type_e dshot_type);
 static void dshot_dma_tc_callback(DMA_HandleTypeDef *hdma);
 static void dshot_put_tc_callback_function(void);
-static void dshot_start_pwm();
+static void dshot_start_pwm(void);
 
 // dshot write
 static uint16_t dshot_prepare_packet(uint16_t value);
 static void dshot_prepare_dmabuffer(uint32_t* motor_dmabuffer, uint16_t value);
-static void dshot_prepare_dmabuffer_all();
-static void dshot_dma_start();
-static void dshot_enable_dma_request();
+static void dshot_prepare_dmabuffer_all(uint16_t* motor_value);
+static void dshot_dma_start(void);
+static void dshot_enable_dma_request(void);
 
 
 /* Functions */
@@ -133,7 +133,7 @@ static void dshot_put_tc_callback_function(void)
 	MOTOR_4_TIM->hdma[TIM_DMA_ID_CC4]->XferCpltCallback = dshot_dma_tc_callback;
 }
 
-static void dshot_start_pwm()
+static void dshot_start_pwm(void)
 {
 	// Start the timer channel now.
     // Enabling/disabling DMA request can restart a new cycle without PWM start/stop.
@@ -190,7 +190,7 @@ static void dshot_prepare_dmabuffer_all(uint16_t* motor_value)
 	dshot_prepare_dmabuffer(motor4_dmabuffer, motor_value[3]);
 }
 
-static void dshot_dma_start()
+static void dshot_dma_start(void)
 {
 	HAL_DMA_Start_IT(MOTOR_1_TIM->hdma[TIM_DMA_ID_CC1], (uint32_t)motor1_dmabuffer, (uint32_t)&MOTOR_1_TIM->Instance->CCR1, DSHOT_DMA_BUFFER_SIZE);
 	HAL_DMA_Start_IT(MOTOR_2_TIM->hdma[TIM_DMA_ID_CC2], (uint32_t)motor2_dmabuffer, (uint32_t)&MOTOR_2_TIM->Instance->CCR2, DSHOT_DMA_BUFFER_SIZE);
@@ -198,7 +198,7 @@ static void dshot_dma_start()
 	HAL_DMA_Start_IT(MOTOR_4_TIM->hdma[TIM_DMA_ID_CC4], (uint32_t)motor4_dmabuffer, (uint32_t)&MOTOR_4_TIM->Instance->CCR4, DSHOT_DMA_BUFFER_SIZE);
 }
 
-static void dshot_enable_dma_request()
+static void dshot_enable_dma_request(void)
 {
 	__HAL_TIM_ENABLE_DMA(MOTOR_1_TIM, TIM_DMA_CC1);
 	__HAL_TIM_ENABLE_DMA(MOTOR_2_TIM, TIM_DMA_CC2);
