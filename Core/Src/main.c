@@ -73,6 +73,7 @@ static void MX_TIM2_Init(void);
 uint8_t rx[20];
 uint8_t tx[20] = {0x12, 0x34};
 uint16_t pwm[4] = {0, 0, 0, 0};
+uint16_t pwm_tmp[4] = {0, 0, 0, 0};
 uint32_t pwm_update_time = 0;
 
 uint32_t pwm_update_count = 0;
@@ -149,20 +150,30 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
         is_connect = false;
       }
     }
-    
+
     if (is_connect == true && is_startup == true)
     {
       memcpy(pwm, rx + 2, 8);
       memcpy(tx + 2 + 8, rx + 2, 8);
 
-      for (int i; i < 4; i++)
+      for (int i = 0; i < 4; i++)
       {
-        pwm[i] = pwm[i] * DSHOT_MAX_THROTTLE / 1000;
+        if(pwm[i] > 1000)
+        {
+          pwm[i] = 1000;
+        }  
+        
+        if(pwm[i] > 0)
+        {
+          pwm[i] = DSHOT_MIN_THROTTLE + (pwm[i]-1) * 1999 / 999;
+        }
+        
+        pwm_tmp[i] = pwm[i];
       }
     }
     else
     {
-      for (int i; i < 4; i++)
+      for (int i = 0; i < 4; i++)
       {
         pwm[i] = 0;
       }
@@ -181,7 +192,10 @@ void loop_1s(void)
   {
     loop_1s = now;
 
-    printf("pwm:%d %d %d %d update:%d loop:%d rx:%d isconnect:%d\r\n", pwm[0], pwm[1], pwm[2], pwm[3], pwm_update_count_last, loop_count_last, uart_callback_count_last, is_connect);
+    printf("pwm:%d %d %d %d dshot:%d %d %d %d update:%d loop:%d rx:%d isconnect:%d\r\n",
+           pwm[0], pwm[1], pwm[2], pwm[3],
+           pwm_tmp[0], pwm_tmp[1], pwm_tmp[2], pwm_tmp[3],
+           pwm_update_count_last, loop_count_last, uart_callback_count_last, is_connect);
   }
 }
 
