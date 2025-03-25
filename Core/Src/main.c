@@ -1,26 +1,27 @@
 /* USER CODE BEGIN Header */
 /**
-  ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2025 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file           : main.c
+ * @brief          : Main program body
+ ******************************************************************************
+ * @attention
+ *
+ * Copyright (c) 2025 STMicroelectronics.
+ * All rights reserved.
+ *
+ * This software is licensed under terms that can be found in the LICENSE file
+ * in the root directory of this software component.
+ * If no LICENSE file comes with this software, it is provided AS-IS.
+ *
+ ******************************************************************************
+ */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "stdint.h"
 #include "dshot.h"
 /* USER CODE END Includes */
 
@@ -43,6 +44,7 @@
 ADC_HandleTypeDef hadc1;
 
 TIM_HandleTypeDef htim1;
+TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
 DMA_HandleTypeDef hdma_tim3_ch1;
 DMA_HandleTypeDef hdma_tim3_ch2;
@@ -66,17 +68,21 @@ static void MX_TIM1_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_USART1_UART_Init(void);
+static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
 uint8_t rx[20];
 uint8_t tx[20] = {0x12, 0x34};
 uint16_t pwm[4] = {0, 0, 0, 0};
-uint64_t count = 0;
-uint16_t pwm_count_fps = 0;
-uint64_t pwm_update_count = 0;
+uint32_t pwm_update_time = 0;
+
+uint32_t pwm_update_count = 0;
 uint16_t loop_count = 0;
 uint16_t uart_callback_count = 0;
 
-int start_up_count = 0;
+uint32_t pwm_update_count_last = 0;
+uint16_t loop_count_last = 0;
+uint16_t uart_callback_count_last = 0;
+
 bool is_startup = false;
 bool is_connect = false;
 bool last_state = false;
@@ -96,10 +102,10 @@ int fputc(int ch, FILE *f)
 
 void nop_delay(uint32_t cnt)
 {
-		while(cnt--)
-		{
-			__NOP();
-		}
+  while (cnt--)
+  {
+    __NOP();
+  }
 }
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
@@ -114,14 +120,17 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
     }
     else
     {
+      pwm_update_time = TIM2->CNT;
       is_connect = true;
     }
   }
   else if (rx[0] == 0xAB || rx[1] == 0xCD)
   {
-    pwm_update_count = count;
-    pwm_count_fps++;
-  }else{
+    pwm_update_time = TIM2->CNT;
+    pwm_update_count++;
+  }
+  else
+  {
     is_connect = false;
   }
 }
@@ -132,46 +141,82 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
   if (htim->Instance == htim1.Instance)
   {
-    count++;
+
     if (is_connect == true)
     {
-      if ((count - pwm_update_count) > 20)
+      if ((TIM2->CNT - pwm_update_time) > 100)
       {
         is_connect = false;
       }
     }
-
-    if (++tim_delay >= 10)
+    
+    if (is_connect == true && is_startup == true)
     {
-      //printf("%d %d %d %d fps:%d %d %d %d\r\n", pwm[0], pwm[1], pwm[2], pwm[3], pwm_count_fps,loop_count,uart_callback_count,is_connect);
-      
-      ((uint16_t *)tx)[9] = pwm_count_fps;
-      ((uint16_t *)tx)[10] = loop_count;
-      ((uint16_t *)tx)[11] = uart_callback_count;
-      ((uint16_t *)tx)[12] = is_connect;
+      memcpy(pwm, rx + 2, 8);
+      memcpy(tx + 2 + 8, rx + 2, 8);
 
-      HAL_UART_Transmit(&huart2, tx, 30, 0xffff);
-
-      pwm_count_fps = 0;
-      loop_count = 0;
-      uart_callback_count = 0;
-      tim_delay = 0;
+      for (int i; i < 4; i++)
+      {
+        pwm[i] = pwm[i] * DSHOT_MAX_THROTTLE / 1000;
+      }
     }
-		
-		if(start_up_count < 300)
-		{
-			start_up_count++;
-		}else{
-			is_startup = true;
-		}
+    else
+    {
+      for (int i; i < 4; i++)
+      {
+        pwm[i] = 0;
+      }
+    }
+
+    dshot_write(pwm);
   }
 }
+
+void loop_1s(void)
+{
+  static uint32_t loop_1s = 0;
+  uint32_t now = TIM2->CNT;
+
+  if (TIM2->CNT - loop_1s >= 1000)
+  {
+    loop_1s = now;
+
+    printf("pwm:%d %d %d %d update:%d loop:%d rx:%d isconnect:%d\r\n", pwm[0], pwm[1], pwm[2], pwm[3], pwm_update_count_last, loop_count_last, uart_callback_count_last, is_connect);
+  }
+}
+
+void loop_100ms(void)
+{
+  static uint32_t loop_100ms = 0;
+  uint32_t now = TIM2->CNT;
+
+  if (TIM2->CNT - loop_100ms >= 100)
+  {
+    loop_100ms = now;
+
+    ((uint16_t *)tx)[9] = pwm_update_count;
+    ((uint16_t *)tx)[10] = loop_count;
+    ((uint16_t *)tx)[11] = uart_callback_count;
+    ((uint16_t *)tx)[12] = is_connect;
+
+    pwm_update_count_last = pwm_update_count;
+    loop_count_last = loop_count;
+    uart_callback_count_last = uart_callback_count;
+
+    pwm_update_count = 0;
+    loop_count = 0;
+    uart_callback_count = 0;
+
+    HAL_UART_Transmit(&huart2, tx, 30, 0xffff);
+  }
+}
+
 /* USER CODE END 0 */
 
 /**
-  * @brief  The application entry point.
-  * @retval int
-  */
+ * @brief  The application entry point.
+ * @retval int
+ */
 int main(void)
 {
 
@@ -203,20 +248,15 @@ int main(void)
   MX_TIM3_Init();
   MX_USART2_UART_Init();
   MX_USART1_UART_Init();
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-	printf("startup\r\n");
+  printf("startup\r\n");
+  HAL_ADCEx_Calibration_Start(&hadc1);
   HAL_TIM_Base_Start_IT(&htim1);
+  HAL_TIM_Base_Start_IT(&htim2);
   dshot_init(DSHOT300);
   dshot_write(pwm);
-//  HAL_Delay(1000);
-//  HAL_Delay(1000);
-//  HAL_Delay(1000);
-//	printf("wait\r\n");
-//	while(is_startup == false)
-//	{
-//		__NOP();
-//	}
-	printf("connecting...\r\n");
+  printf("connecting...\r\n");
   HAL_UART_Receive_DMA(&huart2, rx, 10);
   /* USER CODE END 2 */
 
@@ -227,42 +267,28 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-		
-		
-		if(last_state == false && is_connect == true)
-		{
-			last_state = true;
-			printf("connected\r\n");
-		}else if(last_state == true && is_connect == false)
-		{
-			last_state = false;
-			printf("disconnect\r\n");
-		}
-		
-		
-    if (is_connect == true && is_startup == true)
+
+    loop_100ms();
+    loop_1s();
+
+    if (last_state == false && is_connect == true)
     {
-      memcpy(pwm, rx + 2, 8);
-      memcpy(tx+2+8, rx + 2, 8);
-      // HAL_UART_Transmit(&huart1, rx, 10, 0xffff);
-      for (int i; i < 4; i++)
-      {
-        pwm[i] = pwm[i] * DSHOT_MAX_THROTTLE / 1000;
-      }
+      last_state = true;
+      printf("connected\r\n");
     }
-    else
+    else if (last_state == true && is_connect == false)
     {
-      for (int i; i < 4; i++)
-      {
-        pwm[i] = 0;
-      }
+      last_state = false;
+      printf("disconnect\r\n");
     }
 
-    dshot_write(pwm);
-    for (int i = 0; i < 4000; i++)
+    if (is_startup == false)
     {
+      if (TIM2->CNT > 3000)
+      {
+        is_startup = true;
+      }
     }
-    // HAL_Delay(1);
 
     for (int i = 0; i < 4; i++)
     {
@@ -281,21 +307,21 @@ int main(void)
 }
 
 /**
-  * @brief System Clock Configuration
-  * @retval None
-  */
+ * @brief System Clock Configuration
+ * @retval None
+ */
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
   /** Configure the main internal regulator output voltage
-  */
+   */
   HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE1);
 
   /** Initializes the RCC Oscillators according to the specified parameters
-  * in the RCC_OscInitTypeDef structure.
-  */
+   * in the RCC_OscInitTypeDef structure.
+   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.HSIDiv = RCC_HSI_DIV1;
@@ -313,9 +339,8 @@ void SystemClock_Config(void)
   }
 
   /** Initializes the CPU, AHB and APB buses clocks
-  */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                              |RCC_CLOCKTYPE_PCLK1;
+   */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
@@ -327,10 +352,10 @@ void SystemClock_Config(void)
 }
 
 /**
-  * @brief ADC1 Initialization Function
-  * @param None
-  * @retval None
-  */
+ * @brief ADC1 Initialization Function
+ * @param None
+ * @retval None
+ */
 static void MX_ADC1_Init(void)
 {
 
@@ -345,7 +370,7 @@ static void MX_ADC1_Init(void)
   /* USER CODE END ADC1_Init 1 */
 
   /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
-  */
+   */
   hadc1.Instance = ADC1;
   hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
   hadc1.Init.Resolution = ADC_RESOLUTION_12B;
@@ -371,7 +396,7 @@ static void MX_ADC1_Init(void)
   }
 
   /** Configure Regular Channel
-  */
+   */
   sConfig.Channel = ADC_CHANNEL_0;
   sConfig.Rank = ADC_REGULAR_RANK_1;
   sConfig.SamplingTime = ADC_SAMPLINGTIME_COMMON_1;
@@ -381,7 +406,7 @@ static void MX_ADC1_Init(void)
   }
 
   /** Configure Regular Channel
-  */
+   */
   sConfig.Channel = ADC_CHANNEL_1;
   sConfig.Rank = ADC_REGULAR_RANK_2;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
@@ -390,7 +415,7 @@ static void MX_ADC1_Init(void)
   }
 
   /** Configure Regular Channel
-  */
+   */
   sConfig.Channel = ADC_CHANNEL_4;
   sConfig.Rank = ADC_REGULAR_RANK_3;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
@@ -399,7 +424,7 @@ static void MX_ADC1_Init(void)
   }
 
   /** Configure Regular Channel
-  */
+   */
   sConfig.Channel = ADC_CHANNEL_5;
   sConfig.Rank = ADC_REGULAR_RANK_4;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
@@ -409,14 +434,13 @@ static void MX_ADC1_Init(void)
   /* USER CODE BEGIN ADC1_Init 2 */
 
   /* USER CODE END ADC1_Init 2 */
-
 }
 
 /**
-  * @brief TIM1 Initialization Function
-  * @param None
-  * @retval None
-  */
+ * @brief TIM1 Initialization Function
+ * @param None
+ * @retval None
+ */
 static void MX_TIM1_Init(void)
 {
 
@@ -433,7 +457,7 @@ static void MX_TIM1_Init(void)
   htim1.Instance = TIM1;
   htim1.Init.Prescaler = 639;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 999;
+  htim1.Init.Period = 49;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
@@ -456,14 +480,57 @@ static void MX_TIM1_Init(void)
   /* USER CODE BEGIN TIM1_Init 2 */
 
   /* USER CODE END TIM1_Init 2 */
-
 }
 
 /**
-  * @brief TIM3 Initialization Function
-  * @param None
-  * @retval None
-  */
+ * @brief TIM2 Initialization Function
+ * @param None
+ * @retval None
+ */
+static void MX_TIM2_Init(void)
+{
+
+  /* USER CODE BEGIN TIM2_Init 0 */
+
+  /* USER CODE END TIM2_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM2_Init 1 */
+
+  /* USER CODE END TIM2_Init 1 */
+  htim2.Instance = TIM2;
+  htim2.Init.Prescaler = 64000 - 1;
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 0xFFFFFFFF;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM2_Init 2 */
+
+  /* USER CODE END TIM2_Init 2 */
+}
+
+/**
+ * @brief TIM3 Initialization Function
+ * @param None
+ * @retval None
+ */
 static void MX_TIM3_Init(void)
 {
 
@@ -527,14 +594,13 @@ static void MX_TIM3_Init(void)
 
   /* USER CODE END TIM3_Init 2 */
   HAL_TIM_MspPostInit(&htim3);
-
 }
 
 /**
-  * @brief USART1 Initialization Function
-  * @param None
-  * @retval None
-  */
+ * @brief USART1 Initialization Function
+ * @param None
+ * @retval None
+ */
 static void MX_USART1_UART_Init(void)
 {
 
@@ -575,14 +641,13 @@ static void MX_USART1_UART_Init(void)
   /* USER CODE BEGIN USART1_Init 2 */
 
   /* USER CODE END USART1_Init 2 */
-
 }
 
 /**
-  * @brief USART2 Initialization Function
-  * @param None
-  * @retval None
-  */
+ * @brief USART2 Initialization Function
+ * @param None
+ * @retval None
+ */
 static void MX_USART2_UART_Init(void)
 {
 
@@ -611,12 +676,11 @@ static void MX_USART2_UART_Init(void)
   /* USER CODE BEGIN USART2_Init 2 */
 
   /* USER CODE END USART2_Init 2 */
-
 }
 
 /**
-  * Enable DMA controller clock
-  */
+ * Enable DMA controller clock
+ */
 static void MX_DMA_Init(void)
 {
 
@@ -633,25 +697,24 @@ static void MX_DMA_Init(void)
   /* DMA1_Ch4_5_DMAMUX1_OVR_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Ch4_5_DMAMUX1_OVR_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA1_Ch4_5_DMAMUX1_OVR_IRQn);
-
 }
 
 /**
-  * @brief GPIO Initialization Function
-  * @param None
-  * @retval None
-  */
+ * @brief GPIO Initialization Function
+ * @param None
+ * @retval None
+ */
 static void MX_GPIO_Init(void)
 {
-/* USER CODE BEGIN MX_GPIO_Init_1 */
-/* USER CODE END MX_GPIO_Init_1 */
+  /* USER CODE BEGIN MX_GPIO_Init_1 */
+  /* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
-/* USER CODE BEGIN MX_GPIO_Init_2 */
-/* USER CODE END MX_GPIO_Init_2 */
+  /* USER CODE BEGIN MX_GPIO_Init_2 */
+  /* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */
@@ -659,9 +722,9 @@ static void MX_GPIO_Init(void)
 /* USER CODE END 4 */
 
 /**
-  * @brief  This function is executed in case of error occurrence.
-  * @retval None
-  */
+ * @brief  This function is executed in case of error occurrence.
+ * @retval None
+ */
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
@@ -673,14 +736,14 @@ void Error_Handler(void)
   /* USER CODE END Error_Handler_Debug */
 }
 
-#ifdef  USE_FULL_ASSERT
+#ifdef USE_FULL_ASSERT
 /**
-  * @brief  Reports the name of the source file and the source line number
-  *         where the assert_param error has occurred.
-  * @param  file: pointer to the source file name
-  * @param  line: assert_param error line source number
-  * @retval None
-  */
+ * @brief  Reports the name of the source file and the source line number
+ *         where the assert_param error has occurred.
+ * @param  file: pointer to the source file name
+ * @param  line: assert_param error line source number
+ * @retval None
+ */
 void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */
