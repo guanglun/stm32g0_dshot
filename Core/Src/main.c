@@ -90,6 +90,7 @@ uint16_t uart_callback_count_last = 0;
 uint32_t pkg_interval = 0;
 uint32_t pkg_interval_min = 0xFFFFFFFF;
 uint32_t pkg_interval_max = 0;
+uint32_t connected_time = 0;
 
 uint16_t test_count = 0;
 
@@ -163,6 +164,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
     }
     else
     {
+      connected_time = TIM2->CNT;
       memcpy(rxtmp, rx, RDATA_SIZE);
       pwm_update_time = TIM2->CNT;
       pwm_update_time_last = pwm_update_time;
@@ -188,8 +190,6 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
       pkg_interval_min = pkg_interval;
     }
     pwm_update_time_last = pwm_update_time;
-
-    pwm_update_count++;
   }
   else
   {
@@ -223,14 +223,14 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
           memcpy(pwm, rxtmp + 2, 8);
           memcpy(tx + 2 + 8, rxtmp + 2, 8);
 
-          if ((pwm[0] + 1 != pwm[1]) || (pwm[0] + 2 != pwm[2]) || (pwm[0] + 3 != pwm[3]))
-          {
-            printf("ERROR %d %d %d %d\r\n", pwm[0], pwm[1], pwm[2], pwm[3]);
-            show_hex(rxtmp, RDATA_SIZE);
-            while (1)
-            {
-            };
-          }
+          // if ((pwm[0] + 1 != pwm[1]) || (pwm[0] + 2 != pwm[2]) || (pwm[0] + 3 != pwm[3]))
+          // {
+          //   printf("ERROR %d %d %d %d\r\n", pwm[0], pwm[1], pwm[2], pwm[3]);
+          //   show_hex(rxtmp, RDATA_SIZE);
+          //   while (1)
+          //   {
+          //   };
+          // }
 
           for (int i = 0; i < 4; i++)
           {
@@ -243,9 +243,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
             {
               pwm[i] = DSHOT_MIN_THROTTLE + (pwm[i] - 1) * 1999 / 999;
             }
-
-            pwm_tmp[i] = pwm[i];
           }
+
+          pwm_update_count++;
         }
       }
     }
@@ -258,6 +258,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     }
 
     dshot_write(pwm);
+
+    for(int i=0;i<4;i++)
+    {
+      pwm_tmp[i] = pwm[i];
+    }
   }
 }
 
@@ -270,11 +275,11 @@ void loop_1s(void)
   {
     loop_1s = now;
 
-    printf("pwm:%d %d %d %d dshot:%d %d %d %d update:%d loop:%d rx:%d isconnect:%d max:%d min:%d\r\n",
-           pwm[0], pwm[1], pwm[2], pwm[3],
-           pwm_tmp[0], pwm_tmp[1], pwm_tmp[2], pwm_tmp[3],
+    printf("update:%d loop:%d rx:%d isconnect:%d max:%d min:%d pwm:%d %d %d %d dshot:%d %d %d %d\r\n",
            pwm_update_count_last, loop_count_last, uart_callback_count_last, is_connect,
-           pkg_interval_max, pkg_interval_min);
+           pkg_interval_max, pkg_interval_min,
+           pwm[0], pwm[1], pwm[2], pwm[3],
+           pwm_tmp[0], pwm_tmp[1], pwm_tmp[2], pwm_tmp[3]);
   }
 }
 
@@ -291,6 +296,15 @@ void loop_100ms(void)
     ((uint16_t *)tx)[10] = loop_count;
     ((uint16_t *)tx)[11] = uart_callback_count;
     ((uint16_t *)tx)[12] = is_connect;
+
+    // if (is_connect == true && is_startup == true && TIM2->CNT - connected_time > 3000)
+    // {
+    //   if(pwm_update_count != 40 && pwm_update_count != 39)
+    //   {
+    //     printf("ERROR PWM UPDATE %d\r\n",pwm_update_count);
+    //     while(1){};
+    //   }
+    // }
 
     pwm_update_count_last = pwm_update_count;
     loop_count_last = loop_count;
