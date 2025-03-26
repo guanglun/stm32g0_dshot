@@ -153,14 +153,22 @@ int check_pkg(uint8_t *input)
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
+  uint32_t uart_callback_time = TIM2->CNT;
+
   uart_callback_count++;
 
   if (is_connect == false)
   {
     if (check_pkg(rx) != 0)
     {
+      // HAL_UART_DMAStop(&huart2);
+      HAL_UART_DMAPause(&huart2);
       printf("first pkg error\r\n");
       show_hex(rx, RDATA_SIZE);
+      
+      while(TIM2->CNT - uart_callback_time < 33){};
+      HAL_UART_DMAResume(&huart2);
+      // HAL_UART_Receive_DMA(&huart2, rx, 10);
     }
     else
     {
@@ -299,7 +307,7 @@ void loop_100ms(void)
 
     // if (is_connect == true && is_startup == true && TIM2->CNT - connected_time > 3000)
     // {
-    //   if(pwm_update_count != 40 && pwm_update_count != 39)
+    //   if(pwm_update_count != 40 && pwm_update_count != 39 && pwm_update_count != 41)
     //   {
     //     printf("ERROR PWM UPDATE %d\r\n",pwm_update_count);
     //     while(1){};
