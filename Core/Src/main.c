@@ -70,7 +70,9 @@ static void MX_USART2_UART_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
-uint8_t rx[20];
+#define RDATA_SIZE 12
+uint8_t rx[RDATA_SIZE];
+uint8_t rxtmp[RDATA_SIZE];
 uint8_t tx[20] = {0x12, 0x34};
 uint16_t pwm[4] = {0, 0, 0, 0};
 uint16_t pwm_tmp[4] = {0, 0, 0, 0};
@@ -89,9 +91,13 @@ uint32_t pkg_interval = 0;
 uint32_t pkg_interval_min = 0xFFFFFFFF;
 uint32_t pkg_interval_max = 0;
 
+uint16_t test_count = 0;
+
 bool is_startup = false;
 bool is_connect = false;
 bool last_state = false;
+bool is_pkg_update = false;
+uint32_t lock = 0;
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -114,44 +120,76 @@ void nop_delay(uint32_t cnt)
   }
 }
 
+void show_hex(uint8_t *buf, int len)
+{
+  for (int i = 0; i < len; i++)
+  {
+    printf("%02X ", buf[i]);
+  }
+}
+
+int check_pkg(uint8_t *input)
+{
+  uint16_t check_sum = 0;
+  int ret = -1;
+
+  if (input[0] == 0xAB && input[1] == 0xCD)
+  {
+    for (int i = 2; i < RDATA_SIZE - 2; i++)
+    {
+      check_sum += input[i];
+    }
+
+    uint16_t rx_check_sum = (uint16_t)((input[RDATA_SIZE - 1] << 8) | input[RDATA_SIZE - 2]);
+    if (check_sum == rx_check_sum)
+    {
+      ret = 0;
+    }
+  }
+
+  return ret;
+}
+
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
   uart_callback_count++;
+
   if (is_connect == false)
   {
-    if (rx[0] != 0xAB || rx[1] != 0xCD)
+    if (check_pkg(rx) != 0)
     {
-      HAL_UART_DMAStop(&huart2);
-      HAL_UART_Receive_DMA(&huart2, rx, 10);
+      printf("first pkg error\r\n");
+      show_hex(rx, RDATA_SIZE);
     }
     else
     {
+      memcpy(rxtmp, rx, RDATA_SIZE);
       pwm_update_time = TIM2->CNT;
       pwm_update_time_last = pwm_update_time;
       is_connect = true;
     }
   }
-  else if (rx[0] == 0xAB || rx[1] == 0xCD)
+  else if (check_pkg(rx) == 0)
   {
-    //HAL_GPIO_WritePin(TEST_GPIO_Port, TEST_Pin, GPIO_PIN_SET);
+    memcpy(rxtmp, rx, RDATA_SIZE);
+    is_pkg_update = true;
 
     pwm_update_time = TIM2->CNT;
 
     pkg_interval = pwm_update_time - pwm_update_time_last;
 
-    if(pkg_interval > pkg_interval_max)
+    if (pkg_interval > pkg_interval_max)
     {
       pkg_interval_max = pkg_interval;
     }
 
-    if(pkg_interval < pkg_interval_min)
+    if (pkg_interval < pkg_interval_min)
     {
       pkg_interval_min = pkg_interval;
     }
     pwm_update_time_last = pwm_update_time;
 
     pwm_update_count++;
-    //HAL_GPIO_WritePin(TEST_GPIO_Port, TEST_Pin, GPIO_PIN_RESET);
   }
   else
   {
@@ -161,6 +199,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
+
   static uint16_t tim_delay = 0;
 
   if (htim->Instance == htim1.Instance)
@@ -174,24 +213,42 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
       }
     }
 
-    if (is_connect == true && is_startup == true)
+    if (is_connect == true && is_startup == true && is_pkg_update == true)
     {
-      memcpy(pwm, rx + 2, 8);
-      memcpy(tx + 2 + 8, rx + 2, 8);
-
-      for (int i = 0; i < 4; i++)
+      is_pkg_update = false;
+      if (check_pkg(rxtmp) == 0)
       {
-        if(pwm[i] > 1000)
+        memcpy(pwm, rxtmp + 2, 8);
+        memcpy(tx + 2 + 8, rxtmp + 2, 8);
+
+        if ((pwm[0] + 1 != pwm[1]) || (pwm[0] + 2 != pwm[2]) || (pwm[0] + 3 != pwm[3]))
         {
-          pwm[i] = 1000;
-        }  
-        
-        if(pwm[i] > 0)
-        {
-          pwm[i] = DSHOT_MIN_THROTTLE + (pwm[i]-1) * 1999 / 999;
+          printf("ERROR %d %d %d %d\r\n", pwm[0], pwm[1], pwm[2], pwm[3]);
+          show_hex(rxtmp, RDATA_SIZE);
+          while (1)
+          {
+          };
         }
-        
-        pwm_tmp[i] = pwm[i];
+
+        for (int i = 0; i < 4; i++)
+        {
+          pwm_tmp[i] = pwm[i];
+        }
+
+        for (int i = 0; i < 4; i++)
+        {
+          if (pwm[i] > 1000)
+          {
+            pwm[i] = 1000;
+          }
+
+          if (pwm[i] > 0)
+          {
+            pwm[i] = DSHOT_MIN_THROTTLE + (pwm[i] - 1) * 1999 / 999;
+          }
+
+          pwm_tmp[i] = pwm[i];
+        }
       }
     }
     else
@@ -218,7 +275,7 @@ void loop_1s(void)
     printf("pwm:%d %d %d %d dshot:%d %d %d %d update:%d loop:%d rx:%d isconnect:%d max:%d min:%d\r\n",
            pwm[0], pwm[1], pwm[2], pwm[3],
            pwm_tmp[0], pwm_tmp[1], pwm_tmp[2], pwm_tmp[3],
-           pwm_update_count_last, loop_count_last, uart_callback_count_last, is_connect, 
+           pwm_update_count_last, loop_count_last, uart_callback_count_last, is_connect,
            pkg_interval_max, pkg_interval_min);
   }
 }
@@ -295,7 +352,7 @@ int main(void)
   dshot_init(DSHOT300);
   dshot_write(pwm);
   printf("connecting...\r\n");
-  HAL_UART_Receive_DMA(&huart2, rx, 10);
+  HAL_UART_Receive_DMA(&huart2, rx, RDATA_SIZE);
   /* USER CODE END 2 */
 
   /* Infinite loop */
