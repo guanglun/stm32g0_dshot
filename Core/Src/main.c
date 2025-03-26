@@ -75,6 +75,7 @@ uint8_t tx[20] = {0x12, 0x34};
 uint16_t pwm[4] = {0, 0, 0, 0};
 uint16_t pwm_tmp[4] = {0, 0, 0, 0};
 uint32_t pwm_update_time = 0;
+uint32_t pwm_update_time_last = 0;
 
 uint32_t pwm_update_count = 0;
 uint16_t loop_count = 0;
@@ -83,6 +84,10 @@ uint16_t uart_callback_count = 0;
 uint32_t pwm_update_count_last = 0;
 uint16_t loop_count_last = 0;
 uint16_t uart_callback_count_last = 0;
+
+uint32_t pkg_interval = 0;
+uint32_t pkg_interval_min = 0xFFFFFFFF;
+uint32_t pkg_interval_max = 0;
 
 bool is_startup = false;
 bool is_connect = false;
@@ -122,13 +127,31 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
     else
     {
       pwm_update_time = TIM2->CNT;
+      pwm_update_time_last = pwm_update_time;
       is_connect = true;
     }
   }
   else if (rx[0] == 0xAB || rx[1] == 0xCD)
   {
+    //HAL_GPIO_WritePin(TEST_GPIO_Port, TEST_Pin, GPIO_PIN_SET);
+
     pwm_update_time = TIM2->CNT;
+
+    pkg_interval = pwm_update_time - pwm_update_time_last;
+
+    if(pkg_interval > pkg_interval_max)
+    {
+      pkg_interval_max = pkg_interval;
+    }
+
+    if(pkg_interval < pkg_interval_min)
+    {
+      pkg_interval_min = pkg_interval;
+    }
+    pwm_update_time_last = pwm_update_time;
+
     pwm_update_count++;
+    //HAL_GPIO_WritePin(TEST_GPIO_Port, TEST_Pin, GPIO_PIN_RESET);
   }
   else
   {
@@ -192,10 +215,11 @@ void loop_1s(void)
   {
     loop_1s = now;
 
-    printf("pwm:%d %d %d %d dshot:%d %d %d %d update:%d loop:%d rx:%d isconnect:%d\r\n",
+    printf("pwm:%d %d %d %d dshot:%d %d %d %d update:%d loop:%d rx:%d isconnect:%d max:%d min:%d\r\n",
            pwm[0], pwm[1], pwm[2], pwm[3],
            pwm_tmp[0], pwm_tmp[1], pwm_tmp[2], pwm_tmp[3],
-           pwm_update_count_last, loop_count_last, uart_callback_count_last, is_connect);
+           pwm_update_count_last, loop_count_last, uart_callback_count_last, is_connect, 
+           pkg_interval_max, pkg_interval_min);
   }
 }
 
