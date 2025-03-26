@@ -213,41 +213,39 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
       }
     }
 
-    if (is_connect == true && is_startup == true && is_pkg_update == true)
+    if (is_connect == true && is_startup == true)
     {
-      is_pkg_update = false;
-      if (check_pkg(rxtmp) == 0)
+      if (is_pkg_update == true)
       {
-        memcpy(pwm, rxtmp + 2, 8);
-        memcpy(tx + 2 + 8, rxtmp + 2, 8);
-
-        if ((pwm[0] + 1 != pwm[1]) || (pwm[0] + 2 != pwm[2]) || (pwm[0] + 3 != pwm[3]))
+        is_pkg_update = false;
+        if (check_pkg(rxtmp) == 0)
         {
-          printf("ERROR %d %d %d %d\r\n", pwm[0], pwm[1], pwm[2], pwm[3]);
-          show_hex(rxtmp, RDATA_SIZE);
-          while (1)
+          memcpy(pwm, rxtmp + 2, 8);
+          memcpy(tx + 2 + 8, rxtmp + 2, 8);
+
+          if ((pwm[0] + 1 != pwm[1]) || (pwm[0] + 2 != pwm[2]) || (pwm[0] + 3 != pwm[3]))
           {
-          };
-        }
-
-        for (int i = 0; i < 4; i++)
-        {
-          pwm_tmp[i] = pwm[i];
-        }
-
-        for (int i = 0; i < 4; i++)
-        {
-          if (pwm[i] > 1000)
-          {
-            pwm[i] = 1000;
+            printf("ERROR %d %d %d %d\r\n", pwm[0], pwm[1], pwm[2], pwm[3]);
+            show_hex(rxtmp, RDATA_SIZE);
+            while (1)
+            {
+            };
           }
 
-          if (pwm[i] > 0)
+          for (int i = 0; i < 4; i++)
           {
-            pwm[i] = DSHOT_MIN_THROTTLE + (pwm[i] - 1) * 1999 / 999;
-          }
+            if (pwm[i] > 1000)
+            {
+              pwm[i] = 1000;
+            }
 
-          pwm_tmp[i] = pwm[i];
+            if (pwm[i] > 0)
+            {
+              pwm[i] = DSHOT_MIN_THROTTLE + (pwm[i] - 1) * 1999 / 999;
+            }
+
+            pwm_tmp[i] = pwm[i];
+          }
         }
       }
     }
