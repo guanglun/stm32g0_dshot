@@ -70,7 +70,7 @@ static void MX_USART2_UART_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
-#define RDATA_SIZE 12
+#define RDATA_SIZE 11
 uint8_t rx[RDATA_SIZE];
 uint8_t rxtmp[RDATA_SIZE];
 uint8_t tx[20] = {0x12, 0x34};
@@ -129,23 +129,42 @@ void show_hex(uint8_t *buf, int len)
   }
 }
 
+uint8_t crc8(const uint8_t *data, uint8_t length) {
+  uint8_t crc = 0xFF;
+  for (uint8_t i = 0; i < length; i++) {
+      crc ^= data[i];
+      for (uint8_t j = 0; j < 8; j++) {
+          if (crc & 0x80) {
+              crc = (crc << 1) ^ 0x31;
+          } else {
+              crc <<= 1;
+          }
+      }
+  }
+  return crc;
+}
+
 int check_pkg(uint8_t *input)
 {
-  uint16_t check_sum = 0;
+  // uint16_t check_sum = 0;
   int ret = -1;
 
   if (input[0] == 0xAB && input[1] == 0xCD)
   {
-    for (int i = 2; i < RDATA_SIZE - 2; i++)
-    {
-      check_sum += input[i];
-    }
-
-    uint16_t rx_check_sum = (uint16_t)((input[RDATA_SIZE - 1] << 8) | input[RDATA_SIZE - 2]);
-    if (check_sum == rx_check_sum)
+    if(input[10] == crc8(input+2,8))
     {
       ret = 0;
     }
+    // for (int i = 2; i < RDATA_SIZE - 2; i++)
+    // {
+    //   check_sum += input[i];
+    // }
+
+    // uint16_t rx_check_sum = (uint16_t)((input[RDATA_SIZE - 1] << 8) | input[RDATA_SIZE - 2]);
+    // if (check_sum == rx_check_sum)
+    // {
+    //   ret = 0;
+    // }
   }
 
   return ret;
@@ -153,22 +172,41 @@ int check_pkg(uint8_t *input)
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
+	static int err_count = 0;
   uint32_t uart_callback_time = TIM2->CNT;
-
+	
+	if (huart->Instance != USART1)
+	{
+		return;
+	}
+	
   uart_callback_count++;
-
+	
   if (is_connect == false)
   {
     if (check_pkg(rx) != 0)
     {
-      // HAL_UART_DMAStop(&huart1);
-      HAL_UART_DMAPause(&huart1);
-      printf("first pkg error\r\n");
-      show_hex(rx, RDATA_SIZE);
-      
-      while(TIM2->CNT - uart_callback_time < 33){};
-      HAL_UART_DMAResume(&huart1);
-      // HAL_UART_Receive_DMA(&huart1, rx, 10);
+			err_count++;
+			
+			printf("%d : ",err_count);
+			show_hex(rx, RDATA_SIZE);
+			printf("\r\n");
+			
+			if(err_count >=2)
+			{
+				err_count = 0;
+				//HAL_NVIC_SystemReset();
+				
+				HAL_UART_DMAStop(&huart1);
+				//HAL_UART_DMAPause(&huart1);
+				//printf("first pkg error\r\n");
+				//show_hex(rx, RDATA_SIZE);
+				
+				//while((TIM2->CNT - uart_callback_time) < 30){};
+				//HAL_UART_DMAResume(&huart1);
+        MX_USART1_UART_Init();
+				HAL_UART_Receive_DMA(&huart1, rx, RDATA_SIZE);
+			}
     }
     else
     {
@@ -369,9 +407,18 @@ int main(void)
   HAL_ADCEx_Calibration_Start(&hadc1);
   HAL_TIM_Base_Start_IT(&htim1);
   HAL_TIM_Base_Start_IT(&htim2);
+	
+	while(TIM2->CNT < 3000);
+	
   dshot_init(DSHOT300);
   dshot_write(pwm);
+
   printf("connecting...\r\n");
+
+
+
+
+
   HAL_UART_Receive_DMA(&huart1, rx, RDATA_SIZE);
   /* USER CODE END 2 */
 
@@ -732,7 +779,7 @@ static void MX_USART1_UART_Init(void)
 
   /* USER CODE END USART1_Init 1 */
   huart1.Instance = USART1;
-  huart1.Init.BaudRate = 115200;
+  huart1.Init.BaudRate = 1562500;
   huart1.Init.WordLength = UART_WORDLENGTH_8B;
   huart1.Init.StopBits = UART_STOPBITS_1;
   huart1.Init.Parity = UART_PARITY_NONE;
