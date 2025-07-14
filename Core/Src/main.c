@@ -170,6 +170,16 @@ int check_pkg(uint8_t *input)
   return ret;
 }
 
+void idle_irq(void)
+{
+  if (is_connect == false)
+  {
+    HAL_UART_DMAStop(&huart1);
+    MX_USART1_UART_Init();
+    HAL_UART_Receive_DMA(&huart1, rx, RDATA_SIZE);
+  }
+}
+
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
 	static int err_count = 0;
@@ -188,28 +198,23 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
     {
 			err_count++;
 			
-			printf("%d : ",err_count);
-			show_hex(rx, RDATA_SIZE);
-			printf("\r\n");
+//			printf("%d : ",err_count);
+//			show_hex(rx, RDATA_SIZE);
+//			printf("\r\n");
 			
-			if(err_count >=2)
-			{
-				err_count = 0;
-				//HAL_NVIC_SystemReset();
-				
-				HAL_UART_DMAStop(&huart1);
-				//HAL_UART_DMAPause(&huart1);
-				//printf("first pkg error\r\n");
-				//show_hex(rx, RDATA_SIZE);
-				
-				//while((TIM2->CNT - uart_callback_time) < 30){};
-				//HAL_UART_DMAResume(&huart1);
-        MX_USART1_UART_Init();
-				HAL_UART_Receive_DMA(&huart1, rx, RDATA_SIZE);
-			}
+//			if(err_count >=3)
+//			{
+//				err_count = 0;
+//				
+//				HAL_UART_DMAStop(&huart1);
+
+//        MX_USART1_UART_Init();
+//				HAL_UART_Receive_DMA(&huart1, rx, RDATA_SIZE);
+//			}
     }
     else
     {
+      __HAL_UART_DISABLE_IT(&huart1, UART_IT_IDLE);
       connected_time = TIM2->CNT;
       memcpy(rxtmp, rx, RDATA_SIZE);
       pwm_update_time = TIM2->CNT;
@@ -415,11 +420,9 @@ int main(void)
 
   printf("connecting...\r\n");
 
-
-
-
-
   HAL_UART_Receive_DMA(&huart1, rx, RDATA_SIZE);
+	__HAL_UART_ENABLE_IT(&huart1, UART_IT_IDLE);
+	
   /* USER CODE END 2 */
 
   /* Infinite loop */
