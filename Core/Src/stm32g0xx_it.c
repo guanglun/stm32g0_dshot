@@ -26,7 +26,7 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN TD */
-
+extern void idle_irq(void);
 /* USER CODE END TD */
 
 /* Private define ------------------------------------------------------------*/
