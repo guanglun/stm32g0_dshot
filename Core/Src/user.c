@@ -13,7 +13,7 @@ extern UART_HandleTypeDef huart2;
 
 uint8_t rx[RDATA_SIZE];
 uint8_t rxtmp[RDATA_SIZE];
-uint8_t tx[20] = {0x12, 0x34};
+uint8_t tx[TDATA_SIZE] = {0x12, 0x34};
 uint16_t pwm[4] = {0, 0, 0, 0};
 uint16_t pwm_tmp[4] = {0, 0, 0, 0};
 uint32_t pwm_update_time = 0;
@@ -295,6 +295,8 @@ void loop_100ms(void)
     loop_count = 0;
     uart_callback_count = 0;
 
-    HAL_UART_Transmit(&huart1, tx, 30, 0xffff);
+    tx[29] = crc8(tx+2, TDATA_SIZE-3);
+
+    HAL_UART_Transmit(&huart1, tx, TDATA_SIZE, 0xffff);
   }
 }

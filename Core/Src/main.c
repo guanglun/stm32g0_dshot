@@ -134,7 +134,12 @@ int main(void)
   MX_USART1_UART_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-  printf("startup\r\n");
+
+  printf("startup v%d.%d\r\n",VERSION_MAJOR,VERSION_MINOR);
+  
+  tx[TDATA_SIZE-3] = VERSION_MAJOR;
+  tx[TDATA_SIZE-2] = VERSION_MINOR;
+
   HAL_ADCEx_Calibration_Start(&hadc1);
   HAL_TIM_Base_Start_IT(&htim2);
 	
