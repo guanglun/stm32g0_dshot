@@ -162,6 +162,14 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
   }
 }
 
+void set_pwm_all(uint16_t value)
+{
+    for (int i = 0; i < 4; i++)
+    {
+          pwm[i] = value;
+    }
+}
+
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 
@@ -207,20 +215,30 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
               pwm[i] = DSHOT_MIN_THROTTLE + (pwm[i] - 1) * 1999 / 999;
             }
           }
-
+          dshot_write(pwm);
           pwm_update_count++;
         }
       }
     }
     else
     {
-      for (int i = 0; i < 4; i++)
-      {
-        pwm[i] = 0;
-      }
+      set_pwm_all(0);
     }
 
-    dshot_write(pwm);
+
+    // if (TIM2->CNT > 5000 && TIM2->CNT < 10000)
+    // {
+    //   set_pwm_all(0);
+    //   dshot_write(pwm);
+    // }else if(TIM2->CNT <= 5000 || TIM2->CNT >= 11000)
+		// {
+			 
+		// }
+    // else
+    // {
+    //   set_pwm_all(100);
+    //   dshot_write(pwm);
+    // }
 
     for (int i = 0; i < 4; i++)
     {

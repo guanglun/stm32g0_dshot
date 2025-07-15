@@ -136,13 +136,11 @@ int main(void)
   /* USER CODE BEGIN 2 */
   printf("startup\r\n");
   HAL_ADCEx_Calibration_Start(&hadc1);
-  HAL_TIM_Base_Start_IT(&htim1);
   HAL_TIM_Base_Start_IT(&htim2);
 	
-	while(TIM2->CNT < 3000);
-	
   dshot_init(DSHOT300);
-  dshot_write(pwm);
+  while(TIM2->CNT < 100);
+  HAL_TIM_Base_Start_IT(&htim1);
 
   printf("connecting...\r\n");
 
