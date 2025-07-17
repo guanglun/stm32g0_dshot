@@ -48,8 +48,8 @@ void dshot_write(uint16_t *motor_value)
 		if (motor_value[i] > DSHOT_MAX_THROTTLE)
 			motor_value[i] = DSHOT_MAX_THROTTLE;
 
-		if (motor_value[i] < DSHOT_MIN_THROTTLE)
-			motor_value[i] = 0;
+		// if (motor_value[i] < DSHOT_MIN_THROTTLE)
+		// 	motor_value[i] = 0;
 	}
 
 	dshot_prepare_dmabuffer_all(motor_value);
@@ -145,7 +145,7 @@ static void dshot_start_pwm(void)
 static uint16_t dshot_prepare_packet(uint16_t value)
 {
 	uint16_t packet;
-	bool dshot_telemetry = false;
+	bool dshot_telemetry = true;
 
 	packet = (value << 1) | (dshot_telemetry ? 1 : 0);
 

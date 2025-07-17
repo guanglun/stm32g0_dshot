@@ -222,21 +222,27 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     }
     else
     {
-      set_pwm_all(0);
+      set_pwm_all(1);
+      dshot_write(pwm);
     }
-
 
     // if (TIM2->CNT > 5000 && TIM2->CNT < 10000)
     // {
     //   set_pwm_all(0);
     //   dshot_write(pwm);
-    // }else if(TIM2->CNT <= 5000 || TIM2->CNT >= 11000)
+    // }
+    // else if(TIM2->CNT <= 5000 || TIM2->CNT >= 11000)
 		// {
 			 
 		// }
+    // if(TIM2->CNT < 5000)
+    // {
+    //   set_pwm_all(0);
+    //   dshot_write(pwm);
+    // }
     // else
     // {
-    //   set_pwm_all(100);
+    //   set_pwm_all(1);
     //   dshot_write(pwm);
     // }
 
