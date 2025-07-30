@@ -72,8 +72,8 @@ extern uint16_t pwm[];
 
 int fputc(int ch, FILE *f)
 {
-  while ((USART2->ISR & 0X40) == 0);
-  USART2->TDR = (uint8_t)ch;
+  while ((USART1->ISR & 0X40) == 0);
+  USART1->TDR = (uint8_t)ch;
   return ch;
 }
 
@@ -89,9 +89,9 @@ void idle_irq(void)
 {
   if (is_connect == false)
   {
-    HAL_UART_DMAStop(&huart1);
-    MX_USART1_UART_Init();
-    HAL_UART_Receive_DMA(&huart1, rx, RDATA_SIZE);
+    HAL_UART_DMAStop(&huart2);
+    MX_USART2_UART_Init();
+    HAL_UART_Receive_DMA(&huart2, rx, RDATA_SIZE);
   }
 }
 
@@ -149,8 +149,8 @@ int main(void)
 
   printf("connecting...\r\n");
 
-  HAL_UART_Receive_DMA(&huart1, rx, RDATA_SIZE);
-	__HAL_UART_ENABLE_IT(&huart1, UART_IT_IDLE);
+  HAL_UART_Receive_DMA(&huart2, rx, RDATA_SIZE);
+	__HAL_UART_ENABLE_IT(&huart2, UART_IT_IDLE);
 	
   /* USER CODE END 2 */
 

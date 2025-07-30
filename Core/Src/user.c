@@ -120,15 +120,15 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
       //			{
       //				err_count = 0;
       //
-      //				HAL_UART_DMAStop(&huart1);
+      //				HAL_UART_DMAStop(&huart2);
 
       //        MX_USART1_UART_Init();
-      //				HAL_UART_Receive_DMA(&huart1, rx, RDATA_SIZE);
+      //				HAL_UART_Receive_DMA(&huart2, rx, RDATA_SIZE);
       //			}
     }
     else
     {
-      __HAL_UART_DISABLE_IT(&huart1, UART_IT_IDLE);
+      __HAL_UART_DISABLE_IT(&huart2, UART_IT_IDLE);
       connected_time = TIM2->CNT;
       memcpy(rxtmp, rx, RDATA_SIZE);
       pwm_update_time = TIM2->CNT;
@@ -303,6 +303,6 @@ void loop_100ms(void)
 
     tx[29] = crc8(tx+2, TDATA_SIZE-3);
 
-    HAL_UART_Transmit(&huart1, tx, TDATA_SIZE, 0xffff);
+    HAL_UART_Transmit(&huart2, tx, TDATA_SIZE, 0xffff);
   }
 }
