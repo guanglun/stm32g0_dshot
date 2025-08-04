@@ -150,7 +150,7 @@ int main(void)
   printf("connecting...\r\n");
 
   HAL_UART_Receive_DMA(&huart2, rx, RDATA_SIZE);
-	__HAL_UART_ENABLE_IT(&huart2, UART_IT_IDLE);
+	// __HAL_UART_ENABLE_IT(&huart2, UART_IT_IDLE);
 	
   /* USER CODE END 2 */
 

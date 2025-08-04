@@ -214,11 +214,11 @@ void USART2_IRQHandler(void)
   /* USER CODE END USART2_IRQn 0 */
   HAL_UART_IRQHandler(&huart2);
   /* USER CODE BEGIN USART2_IRQn 1 */
-  if (__HAL_UART_GET_FLAG(&huart2, UART_FLAG_IDLE) != RESET)
-  {
-    __HAL_UART_CLEAR_IDLEFLAG(&huart2);
-    idle_irq();
-  }
+  // if (__HAL_UART_GET_FLAG(&huart2, UART_FLAG_IDLE) != RESET)
+  // {
+  //   __HAL_UART_CLEAR_IDLEFLAG(&huart2);
+  //   idle_irq();
+  // }
   /* USER CODE END USART2_IRQn 1 */
 }
 

@@ -128,7 +128,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
     }
     else
     {
-      __HAL_UART_DISABLE_IT(&huart2, UART_IT_IDLE);
+      // __HAL_UART_DISABLE_IT(&huart2, UART_IT_IDLE);
       connected_time = TIM2->CNT;
       memcpy(rxtmp, rx, RDATA_SIZE);
       pwm_update_time = TIM2->CNT;
