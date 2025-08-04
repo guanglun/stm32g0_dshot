@@ -99,7 +99,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
   static int err_count = 0;
   uint32_t uart_callback_time = TIM2->CNT;
 
-  if (huart->Instance != USART1)
+  if (huart->Instance != USART2)
   {
     return;
   }
@@ -122,7 +122,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
       //
       //				HAL_UART_DMAStop(&huart2);
 
-      //        MX_USART1_UART_Init();
+      //        MX_USART2_UART_Init();
       //				HAL_UART_Receive_DMA(&huart2, rx, RDATA_SIZE);
       //			}
     }
