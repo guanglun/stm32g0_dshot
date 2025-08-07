@@ -99,10 +99,10 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
   static int err_count = 0;
   uint32_t uart_callback_time = TIM2->CNT;
 
-  if (huart->Instance != USART2)
-  {
-    return;
-  }
+  // if (huart->Instance != USART2)
+  // {
+  //   return;
+  // }
 
   uart_callback_count++;
 
@@ -112,9 +112,9 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
     {
       err_count++;
 
-      //			printf("%d : ",err_count);
-      //			show_hex(rx, RDATA_SIZE);
-      //			printf("\r\n");
+      			// printf("%d : ",err_count);
+      			// show_hex(rx, RDATA_SIZE);
+      			// printf("\r\n");
 
       //			if(err_count >=3)
       //			{
