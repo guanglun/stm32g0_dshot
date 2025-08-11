@@ -139,7 +139,7 @@ int main(void)
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
 
-  printf("startup v%d.%d\r\n",VERSION_MAJOR,VERSION_MINOR);
+  printf("aux app startup v%d.%d\r\n",VERSION_MAJOR,VERSION_MINOR);
   
   tx[TDATA_SIZE-3] = VERSION_MAJOR;
   tx[TDATA_SIZE-2] = VERSION_MINOR;
