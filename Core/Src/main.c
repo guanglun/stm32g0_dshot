@@ -182,7 +182,7 @@ int main(void)
 
     if (is_startup == false)
     {
-      if (TIM2->CNT > 3000)
+      if (TIM2->CNT > 1000)
       {
         is_startup = true;
       }
