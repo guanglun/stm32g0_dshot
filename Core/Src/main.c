@@ -106,9 +106,9 @@ int main(void)
 
   /* USER CODE BEGIN 1 */
   SCB->VTOR = 0x08003000;
-//  __enable_irq();
-  // HAL_DeInit();
-  // HAL_RCC_DeInit();
+  __enable_irq();
+  HAL_DeInit();
+  HAL_RCC_DeInit();
 
   /* USER CODE END 1 */
 
