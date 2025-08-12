@@ -233,7 +233,7 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* tim_baseHandle)
 
     /* TIM3 DMA Init */
     /* TIM3_CH1 Init */
-    hdma_tim3_ch1.Instance = DMA1_Channel1;
+    hdma_tim3_ch1.Instance = DMA1_Channel2;
     hdma_tim3_ch1.Init.Request = DMA_REQUEST_TIM3_CH1;
     hdma_tim3_ch1.Init.Direction = DMA_MEMORY_TO_PERIPH;
     hdma_tim3_ch1.Init.PeriphInc = DMA_PINC_DISABLE;
@@ -250,7 +250,7 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* tim_baseHandle)
     __HAL_LINKDMA(tim_baseHandle,hdma[TIM_DMA_ID_CC1],hdma_tim3_ch1);
 
     /* TIM3_CH2 Init */
-    hdma_tim3_ch2.Instance = DMA1_Channel2;
+    hdma_tim3_ch2.Instance = DMA1_Channel3;
     hdma_tim3_ch2.Init.Request = DMA_REQUEST_TIM3_CH2;
     hdma_tim3_ch2.Init.Direction = DMA_MEMORY_TO_PERIPH;
     hdma_tim3_ch2.Init.PeriphInc = DMA_PINC_DISABLE;
@@ -267,7 +267,7 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* tim_baseHandle)
     __HAL_LINKDMA(tim_baseHandle,hdma[TIM_DMA_ID_CC2],hdma_tim3_ch2);
 
     /* TIM3_CH3 Init */
-    hdma_tim3_ch3.Instance = DMA1_Channel3;
+    hdma_tim3_ch3.Instance = DMA1_Channel4;
     hdma_tim3_ch3.Init.Request = DMA_REQUEST_TIM3_CH3;
     hdma_tim3_ch3.Init.Direction = DMA_MEMORY_TO_PERIPH;
     hdma_tim3_ch3.Init.PeriphInc = DMA_PINC_DISABLE;
@@ -284,7 +284,7 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* tim_baseHandle)
     __HAL_LINKDMA(tim_baseHandle,hdma[TIM_DMA_ID_CC3],hdma_tim3_ch3);
 
     /* TIM3_CH4 Init */
-    hdma_tim3_ch4.Instance = DMA1_Channel4;
+    hdma_tim3_ch4.Instance = DMA1_Channel5;
     hdma_tim3_ch4.Init.Request = DMA_REQUEST_TIM3_CH4;
     hdma_tim3_ch4.Init.Direction = DMA_MEMORY_TO_PERIPH;
     hdma_tim3_ch4.Init.PeriphInc = DMA_PINC_DISABLE;
