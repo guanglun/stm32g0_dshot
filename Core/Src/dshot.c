@@ -50,6 +50,11 @@ void dshot_write(uint16_t *motor_value)
 
 		// if (motor_value[i] < DSHOT_MIN_THROTTLE)
 		// 	motor_value[i] = 0;
+
+		if (motor_value[i] < DSHOT_MIN_THROTTLE_LIMIT)
+			motor_value[i] = 0;
+
+		
 	}
 
 	dshot_prepare_dmabuffer_all(motor_value);

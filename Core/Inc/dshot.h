@@ -50,6 +50,7 @@
 #define DSHOT_MAX_THROTTLE     	2047
 #define DSHOT_RANGE 			(DSHOT_MAX_THROTTLE - DSHOT_MIN_THROTTLE)
 
+#define DSHOT_MIN_THROTTLE_LIMIT 52
 
 /* Enumeration */
 typedef enum
